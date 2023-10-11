@@ -2,6 +2,10 @@ import mysql.connector
 from faker import Faker
 import random
 from datetime import date, timedelta
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 fake = Faker()
 
@@ -9,8 +13,10 @@ fake = Faker()
 new_db_name = 'college_db'
 
 conn = mysql.connector.connect( 
-    user='root',  
-  password='12345678', host='localhost', port='3306'
+    user=os.getenv("user"),  
+  password=os.getenv("password"), 
+  host=os.getenv("host"), 
+  port=os.getenv("port")
 ) 
 
 cursor = conn.cursor() 
@@ -32,14 +38,14 @@ no_faculty INT
 );
 '''
 
-cursor.execute(create_table_department_table)
+cursor.execute(create_table_department_table);
 
 # Insert the data into department table
 # Department data to insert
 departments = [
-    (1, "Electrical Engineering", 75),
-    (2, "Mathematics", 50),
-    (3, "Biology", 120)
+    (1, "Electrical Engineering", 0),
+    (2, "Mathematics", 0),
+    (3, "Biology", 0)
 ]
 
 for department in departments:
@@ -98,6 +104,8 @@ for _ in range(15):
             building_number, office_number, salary)
     )
 
+    cursor.execute("UPDATE DEPARTMENT SET no_faculty=no_faculty+1 WHERE id="+str(department_id))
+
     # Commit the transaction
     conn.commit()
 
@@ -141,7 +149,7 @@ for course_id in range(1, 16):  # Assuming course IDs range from 1 to 15
     cursor.execute(update_query, (random_prereq_id, course_id))
 
 
-# Create student table
+# Create Course table
 cursor.execute("""
 CREATE TABLE STUDENT (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -149,7 +157,7 @@ CREATE TABLE STUDENT (
     first_name VARCHAR(20),
     last_name VARCHAR(20),
     dob DATE,
-    hawk_id VARCHAR(30),
+    hawk_id VARCHAR(30) UNIQUE,
     phone_number CHAR(10),
     address VARCHAR(20)
 );
@@ -279,7 +287,6 @@ CREATE TABLE COURSE_WORK (
     title VARCHAR(20) NOT NULL,
     description VARCHAR(30),
     deadline DATE NOT NULL,
-    CONSTRAINT unique_employee_course UNIQUE (employee_id, course_id),
     FOREIGN KEY (employee_id) REFERENCES EMPLOYEE(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES COURSE(id) ON DELETE CASCADE
 );
@@ -343,7 +350,7 @@ cursor.execute("""
 CREATE TABLE STUDENT_COURSE (
     student_id INT NOT NULL,
     course_id INT NOT NULL,
-    total_grade CHAR(1) NOT NULL,
+    total_grade DECIMAL(2,1) NOT NULL,
     CONSTRAINT unique_student_course UNIQUE (student_id, course_id),
     FOREIGN KEY (student_id) REFERENCES STUDENT(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES COURSE(id) ON DELETE CASCADE
@@ -356,7 +363,7 @@ while len(unique_combinations) < 15:
     # Generate random student_id and course_id
     student_id = random.randint(1, 15)  # Assuming student IDs range from 1 to 15
     course_id = random.randint(1, 15)  # Assuming course IDs range from 1 to 15
-    total_grade = random.choice(['A', 'B', 'C', 'D', 'F'])
+    total_grade = round(random.uniform(0, 10), 1)
 
     # Check if the combination of student_id and course_id is unique
     if (student_id, course_id) not in unique_combinations:
@@ -400,7 +407,151 @@ while len(unique_combinations) < 15:
         # Add the combination to the set of unique combinations
         unique_combinations.add((course_id, faculty_id))
 
-
 conn.commit()
+
+# Create an index for name column in the department table by name department_name_index
+cursor.execute("create index department_name on DEPARTMENT(name);")
+
+# Create an index for course_name and course_number together by name course_name_number_index
+cursor.execute("create INDEX course_name_number_index on COURSE(course_name, course_number);")
+
+# Create a view for viewing the basic faculty information
+cursor.execute("""
+    create view student_faculty_view as select id, first_name, last_name, phone_number, email_id from faculty;
+""")
+
+cursor.execute("""
+    CREATE VIEW course_information AS
+    SELECT
+        department.id AS Department_id,
+        name AS course_name,
+        faculty.id AS faculty_id,
+        concat(
+            first_name, " ", last_name) AS faculty_name,
+        phone_number,
+        email_id
+    FROM
+        department
+        INNER JOIN faculty ON department.id = faculty.department_id
+        INNER JOIN course_faculty ON faculty.id = course_faculty.faculty_id
+    ORDER BY
+        department.id
+""")
+
+# Procedure to update the faculty count in the department table
+cursor.execute("""
+CREATE PROCEDURE update_no_faculty_in_department_when_update_delete_in_faculty()
+BEGIN
+update department set no_faculty = (select count(*) from faculty where department_id = department.id );
+END;
+""")
+
+# Procedure to update the faculty count in the department table
+cursor.execute("""
+CREATE PROCEDURE update_no_faculty_in_department_when_insert_in_faculty ( IN depart_id INT)
+BEGIN
+ update department set no_faculty = (select count(*) from faculty where department_id = depart_id ) where department.id = depart_id;
+END;
+""")
+
+# Trigger to update the faculty count in department when the faculty row is deleted
+cursor.execute("""
+Create TRIGGER delete_faculty_count after DELETE on faculty
+for each row 
+BEGIN
+ call update_no_faculty_in_department_when_update_delete_in_faculty();
+END
+""")
+
+# Trigger to update the faculty count in department when the faculty row is updated
+cursor.execute("""
+create TRIGGER update_faculty_count after update on faculty
+for each row 
+BEGIN
+ call update_no_faculty_in_department();
+END
+""")
+
+# Trigger to update the faculty count in department when the faculty row is inserted
+cursor.execute("""
+create TRIGGER insert_faculty_count AFTER INSERT on faculty
+FOR EACH ROW
+BEGIN
+    call update_no_faculty_in_department_when_insert_in_faculty(NEW.department_id);
+END;
+""")
+
+# Trigger to update the total_grade of the student in STUDENT_COURSE
+cursor.execute("""
+CREATE TRIGGER update_total_grade_trigger_at_insert AFTER INSERT on STUDENT_SUBMISSION
+FOR EACH ROW
+BEGIN
+	DECLARE count DECIMAL(2,1);
+	
+    SET count = CalculateTotalStudentGrade(NEW.student_id, NEW.course_work_id);
+END;
+""")
+
+# Function to calculate the total grade of a student
+cursor.execute("""
+CREATE FUNCTION CalculateTotalStudentGrade (student_id INT, course_work_id INT)
+RETURNS DECIMAL(2,1)
+READS SQL DATA
+BEGIN 
+    DECLARE avg_mapped_value DECIMAL(2, 1);
+    DECLARE distinct_course_id INT;
+
+    CREATE TEMPORARY TABLE temp_table (
+        student_id INT,
+        course_id INT,
+        grade CHAR(1)
+    );
+
+    INSERT INTO temp_table (course_id, grade, student_id)
+    SELECT
+        COURSE_WORK.course_id AS course_id,
+        STUDENT_SUBMISSION.grade AS grade,
+        STUDENT_SUBMISSION.student_id AS student_id
+    FROM
+        STUDENT_SUBMISSION
+    INNER JOIN COURSE_WORK ON COURSE_WORK.id = STUDENT_SUBMISSION.course_work_id
+    WHERE
+        STUDENT_SUBMISSION.student_id = student_id
+        AND COURSE_WORK.course_id IN (
+            SELECT
+                COURSE_WORK.course_id
+            FROM
+                STUDENT_SUBMISSION
+            INNER JOIN COURSE_WORK ON COURSE_WORK.id = STUDENT_SUBMISSION.course_work_id
+            WHERE
+                STUDENT_SUBMISSION.student_id = student_id
+                AND COURSE_WORK.id = course_work_id
+        );
+
+    SELECT DISTINCT course_id INTO distinct_course_id FROM temp_table;
+
+    SET avg_mapped_value = (
+        SELECT AVG(
+            CASE
+                WHEN grade = 'A' THEN 5
+                WHEN grade = 'B' THEN 4
+                WHEN grade = 'C' THEN 3
+                WHEN grade = 'D' THEN 2
+                WHEN grade = 'E' THEN 1
+            END
+        ) AS avg_mapped_value
+        FROM temp_table
+    );
+
+    UPDATE STUDENT_COURSE
+    SET total_grade = avg_mapped_value
+    WHERE student_id = student_id AND course_id = distinct_course_id;
+
+    DROP TEMPORARY TABLE temp_table;
+
+	RETURN avg_mapped_value;
+END;
+""")
+# Commit the transaction
 
 conn.close() 
