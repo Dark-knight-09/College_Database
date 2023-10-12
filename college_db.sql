@@ -1,13 +1,12 @@
--- create database parking lot management
+
 create database if not EXISTS college_db;
 
 use college_db;
 
--- customer, employee, parking_lot, parking_spot, reservation, vehicle, parking_log, payment-- 
 select
     'CREATING TABLES...' AS '';
 
--- Creating table FACULTY COMMENT
+/* Create other tables (COURSE, STUDENT, STUDENT_ACCOUNTING, JOB, EMPLOYEE, COURSE_WORK, STUDENT_SUBMISSION, STUDENT_COURSE, COURSE_FACULTY) */
 CREATE TABLE DEPARTMENT(
 id INT AUTO_INCREMENT PRIMARY KEY,
 name VARCHAR(30),
@@ -28,7 +27,7 @@ CREATE TABLE FACULTY (
     salary INT NOT NULL,
     CONSTRAINT fk_department_id FOREIGN KEY (department_id) REFERENCES DEPARTMENT(id) ON DELETE CASCADE
 );
--- Creating table COURSE
+
 CREATE TABLE COURSE(
 id INT AUTO_INCREMENT PRIMARY KEY,
 course_name VARCHAR(30),
@@ -132,14 +131,13 @@ select  'LOADING DATA...' AS '';
 
 
 
--- deparment table
+/* Load data into the tables */
 
 INSERT INTO DEPARTMENT (id, name, no_faculty) VALUES (1, 'Electrical Engineering', 75);
 INSERT INTO DEPARTMENT (id, name, no_faculty) VALUES (2, 'Mathematics', 50);
 INSERT INTO DEPARTMENT (id, name, no_faculty) VALUES (3, 'Biology', 120);
 
-
--- faculty table
+/* faculty Table */
 
 INSERT INTO FACULTY (department_id, first_name, last_name, phone_number, email_id, dob,street_number, building_number, office_number, salary) VALUES
 (3, 'Jerry', 'Wilkinson', '684-837-88', 'jeanettemoss@example.org', '1998-03-26', 2933, '7834', 1936, 77618),
@@ -193,7 +191,7 @@ UPDATE COURSE SET prereq_id = 1 WHERE id = 14;
 UPDATE COURSE SET prereq_id = 8 WHERE id = 15;
 
 
--- student table
+/* student table */
 
 
 INSERT INTO STUDENT (a_number, first_name, last_name, dob, hawk_id, phone_number, address) VALUES 
@@ -214,7 +212,7 @@ INSERT INTO STUDENT (a_number, first_name, last_name, dob, hawk_id, phone_number
 (98476204, 'Whitney', 'Hull', '2003-12-17', 'maria79', '+1-749-322', '30878 Ashley Locks A');
 
 
--- student_accounting table
+/* student_accounting table */
 
 INSERT INTO STUDENT_ACCOUNTING (total, method, is_paid, transaction_id, scholarship, student_id) VALUES
 (1521, 'Credit Card', True, 68930, 357, 7),
@@ -233,7 +231,7 @@ INSERT INTO STUDENT_ACCOUNTING (total, method, is_paid, transaction_id, scholars
 (2123, 'Credit Card', True, 42460, 304, 9),
 (4212, 'Bank Transfer', False, 15346, 29, 13);
 
--- job table
+/* job table */
 
 INSERT INTO JOB (pay_per_hour, job_description, vacancy, faculty_id) VALUES
 (35, 'Programmer, applications', 3, 11),
@@ -252,7 +250,7 @@ INSERT INTO JOB (pay_per_hour, job_description, vacancy, faculty_id) VALUES
 (42, 'Scientist, research (medical)', 1, 6),
 (42, 'Communications engineer', 2, 1);
 
--- employee table
+
 
 INSERT INTO EMPLOYEE (no_hours, remarks, start_date, end_date, job_id, student_id) VALUES 
 (35, 'Effort since relate easy country the.', '2023-09-11', '2024-04-15', 2, 11),
@@ -271,7 +269,7 @@ INSERT INTO EMPLOYEE (no_hours, remarks, start_date, end_date, job_id, student_i
 (22, 'Away land need draw.', '2022-11-25', '2023-11-02', 15, 7),
 (16, 'Ok fine pass sea as enough could.', '2022-12-29', '2023-05-08', 10, 12);
 
--- course_work table
+
 INSERT INTO COURSE_WORK (employee_id, course_id, work_type, title, description, deadline) VALUES
 (13, 5, 'Assignment', 'moment', 'Person any soldier statement.', '2023-10-22'),
 (13, 8, 'Quiz', 'father', 'Difference add front.', '2023-10-20'),
@@ -290,7 +288,7 @@ INSERT INTO COURSE_WORK (employee_id, course_id, work_type, title, description, 
 (13, 13, 'Assignment', 'card', 'Nor job month argue senior.', '2023-10-22');
 
 
--- student_submission table
+
 
 INSERT INTO STUDENT_SUBMISSION (student_id, course_work_id, submission_link, remarks, submission_date, grade) VALUES 
 (1, 2, 'http://www.burch-henson.com/', 'May leave owner air fact service.', '2023-09-19', 'C'),
@@ -309,7 +307,7 @@ INSERT INTO STUDENT_SUBMISSION (student_id, course_work_id, submission_link, rem
 (1, 12, 'https://dixon-hodges.info/', 'Reflect everything north should.', '2023-09-26', 'C'),
 (9, 4, 'https://www.lane.com/', 'Dark mind could floor court nation recent day.', '2023-10-05', 'C');
 
--- student_course table
+
 
 INSERT INTO STUDENT_COURSE (student_id, course_id, total_grade) VALUES 
 (11, 5, 'C'),
@@ -328,7 +326,6 @@ INSERT INTO STUDENT_COURSE (student_id, course_id, total_grade) VALUES
 (11, 6, 'C'),
 (14, 14, 'D');
 
--- course_faculty table
 INSERT INTO COURSE_FACULTY (course_id, faculty_id) VALUES
 (13, 5),
 (1, 12),
@@ -348,16 +345,16 @@ INSERT INTO COURSE_FACULTY (course_id, faculty_id) VALUES
 
 
 
--- Create an index for name column in the department table by name department_name_index
+/* Create an index for name column in the department table by name department_name_index */
 create index department_name on DEPARTMENT(name);
 
--- Create an index for course_name and course_number together by name course_name_number_index
+/* Create an index for course_name and course_number together by name course_name_number_index */
 create INDEX course_name_number_index on COURSE(course_name, course_number);
 
--- Create a view for viewing the basic faculty information
+/* Create a view for viewing the basic faculty information */
 create view student_faculty_view as select id, first_name, last_name, phone_number, email_id from faculty;
 
--- Create a view for viewing the basic course information
+/* Create a view for viewing the basic course information */
     CREATE VIEW course_information AS
     SELECT
         department.id AS Department_id,
@@ -374,7 +371,7 @@ create view student_faculty_view as select id, first_name, last_name, phone_numb
     ORDER BY
         department.id;
 
--- Procedure to update the faculty count in the department table
+/* Procedure to update the faculty count in the department table */
 
 CREATE PROCEDURE update_no_faculty_in_department_when_update_delete_in_faculty()
 BEGIN
@@ -388,7 +385,7 @@ BEGIN
  update department set no_faculty = (select count(*) from faculty where department_id = depart_id ) where department.id = depart_id;
 END;
 
--- Trigger to update the faculty count in department when the faculty row is deleted
+/*Trigger to update the faculty count in department when the faculty row is deleted */
 
 Create TRIGGER delete_faculty_count after DELETE on faculty
 for each row 
@@ -412,7 +409,7 @@ BEGIN
     call update_no_faculty_in_department_when_insert_in_faculty(NEW.department_id);
 END;
 
--- calculating grade for student in course
+/* calculating grade for student in course */
 CREATE FUNCTION CalculateTotalStudentGrade (student_id INT, course_work_id INT)
 RETURNS DECIMAL(2,1)
 READS SQL DATA
