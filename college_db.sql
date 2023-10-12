@@ -343,7 +343,9 @@ INSERT INTO COURSE_FACULTY (course_id, faculty_id) VALUES
 (8, 3),
 (12, 12);
 
+delimiter //
 
+select "working";
 
 /* Create an index for name column in the department table by name department_name_index */
 create index department_name on DEPARTMENT(name);
@@ -475,3 +477,4 @@ BEGIN
 	
     SET count = CalculateTotalStudentGrade(NEW.student_id, NEW.course_work_id);
 END;
+
