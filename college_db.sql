@@ -343,9 +343,7 @@ INSERT INTO COURSE_FACULTY (course_id, faculty_id) VALUES
 (8, 3),
 (12, 12);
 
-delimiter //
 
-select "working";
 
 /* Create an index for name column in the department table by name department_name_index */
 create index department_name on DEPARTMENT(name);
@@ -373,6 +371,7 @@ create view student_faculty_view as select id, first_name, last_name, phone_numb
     ORDER BY
         department.id;
 
+delimiter //
 /* Procedure to update the faculty count in the department table */
 
 CREATE PROCEDURE update_no_faculty_in_department_when_update_delete_in_faculty()
@@ -380,6 +379,7 @@ BEGIN
 update department set no_faculty = (select count(*) from faculty where department_id = department.id );
 END;
 
+//
 /*Procedure to update the faculty count in the department table */
 
 CREATE PROCEDURE update_no_faculty_in_department_when_insert_in_faculty ( IN depart_id INT)
@@ -478,3 +478,5 @@ BEGIN
     SET count = CalculateTotalStudentGrade(NEW.student_id, NEW.course_work_id);
 END;
 
+//
+delimiter ;
